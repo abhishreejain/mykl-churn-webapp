@@ -86,7 +86,12 @@ def run_scoring_job(request: ScoringJobRequest, raise_on_error: bool = False) ->
     try:
         runtime_values = _resolve_from_runtime_config(Path(request.runtime_config_path))
         cfg = _resolve_scoring_cfg(runtime_values, request.project_root)
-        model_path = _resolve_default_model_path(request.model_path, runtime_values, Path(request.metadata_path))
+        model_path = _resolve_default_model_path(
+            request.model_path,
+            runtime_values,
+            Path(request.metadata_path),
+            Path(request.runtime_config_path),
+        )
 
         raw = read_scoring_input(input_path)
         input_row_count = int(len(raw))
@@ -242,17 +247,43 @@ def _resolve_default_model_path(
     model_path: Path | None,
     runtime_values: dict[str, object],
     metadata_path: Path,
+    runtime_config_path: Path,
 ) -> Path:
     if model_path:
-        return Path(model_path)
+        explicit = Path(model_path)
+        if explicit.exists():
+            return explicit
+        raise FileNotFoundError(f"Explicit model path does not exist: {explicit}")
+
+    def _from_raw(raw: object, anchors: list[Path]) -> Path | None:
+        if not raw:
+            return None
+        candidate_raw = Path(str(raw))
+        candidates: list[Path] = []
+        if candidate_raw.is_absolute():
+            candidates.append(candidate_raw)
+        else:
+            candidates.append(candidate_raw)
+            for anchor in anchors:
+                candidates.append(anchor / candidate_raw)
+        for candidate in candidates:
+            if candidate.exists():
+                return candidate
+        return None
+
+    artifacts_anchor = runtime_config_path.resolve().parent.parent.parent if runtime_config_path.exists() else Path(".").resolve()
+    anchors = [
+        Path(".").resolve(),
+        artifacts_anchor,
+        metadata_path.resolve().parent.parent.parent if metadata_path.exists() else artifacts_anchor,
+    ]
 
     runtime_paths = runtime_values.get("paths", {})
     if isinstance(runtime_paths, dict):
         configured = runtime_paths.get("production_model")
-        if configured:
-            candidate = Path(str(configured))
-            if candidate.exists():
-                return candidate
+        candidate = _from_raw(configured, anchors)
+        if candidate is not None:
+            return candidate
 
     if metadata_path.exists():
         try:
@@ -263,19 +294,25 @@ def _resolve_default_model_path(
             bundle = metadata.get("production_bundle", {})
             if isinstance(bundle, dict):
                 for key in ("legacy_production_model_path", "model_joblib"):
-                    raw = bundle.get(key)
-                    if not raw:
-                        continue
-                    candidate = Path(str(raw))
-                    if candidate.exists():
+                    candidate = _from_raw(bundle.get(key), anchors)
+                    if candidate is not None:
                         return candidate
 
-    fallback = Path("artifacts/production/churn_model.joblib")
-    if fallback.exists():
-        return fallback
+    fallback_candidates = [
+        Path("artifacts/production/churn_model.joblib"),
+        Path("artifacts/production/model.joblib"),
+        runtime_config_path.resolve().parent / "churn_model.joblib",
+        runtime_config_path.resolve().parent / "model.joblib",
+        metadata_path.resolve().parent / "churn_model.joblib",
+        metadata_path.resolve().parent / "model.joblib",
+    ]
+    for fallback in fallback_candidates:
+        if fallback.exists():
+            return fallback
+
     raise FileNotFoundError(
-        "Could not resolve production model artifact. Provide explicit model path or package "
-        "`artifacts/production/churn_model.joblib`."
+        "Could not resolve production model artifact. Provide explicit model path or package one of "
+        "`artifacts/production/churn_model.joblib` or `artifacts/production/model.joblib`."
     )
 
 
@@ -286,4 +323,3 @@ def _read_csv_with_fallback(path: Path) -> pd.DataFrame:
         except UnicodeDecodeError:
             continue
     raise UnicodeDecodeError("utf-8", b"", 0, 1, f"Unable to decode CSV input file: {path}")
-

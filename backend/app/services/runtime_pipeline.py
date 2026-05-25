@@ -223,6 +223,20 @@ FINAL_COLUMNS = [
 ]
 
 
+def _resolve_model_artifact_path(artifacts_dir: Path) -> Path:
+    candidates = [
+        artifacts_dir / "churn_model.joblib",
+        artifacts_dir / "model.joblib",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    raise RuntimeError(
+        "Could not resolve production model artifact from runtime artifacts directory. "
+        f"Checked: {', '.join(str(path) for path in candidates)}"
+    )
+
+
 class UploadValidationError(ValueError):
     """Raised when upload workbook fails validation."""
 
@@ -295,6 +309,7 @@ def run_processing_chain(job_id: str, uploaded_input_path: Path) -> dict[str, An
     churn_csv = out_dir / CHURN_CSV_NAME
     final_csv = out_dir / FINAL_CSV_NAME
     final_xlsx = out_dir / FINAL_XLSX_NAME
+    resolved_model_path = _resolve_model_artifact_path(ORIGINAL_ARTIFACTS_DIR)
 
     scoring_command = [
         sys.executable,
@@ -303,6 +318,8 @@ def run_processing_chain(job_id: str, uploaded_input_path: Path) -> dict[str, An
         str(RUNTIME_CONFIG),
         "--metadata",
         str(RUNTIME_METADATA),
+        "--model",
+        str(resolved_model_path),
         "--input",
         str(uploaded_input_path),
         "--output",
