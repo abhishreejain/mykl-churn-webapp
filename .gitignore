@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+env/
+
+# Frontend
+node_modules/
+
+# Generated runtime/job artifacts
+backend/runtime/jobs/
+backend/runtime/tmp/
+backend/runtime/temp/
+backend/runtime/outputs/
+backend/runtime/logs/
+
+# OS/editor
+.DS_Store
+Thumbs.db

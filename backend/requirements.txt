@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+python-multipart
+pandas
+numpy
+scikit-learn
+xgboost
+joblib
+pyyaml
+openpyxl
+xlrd
+pyarrow
+vercel>=0.5.0

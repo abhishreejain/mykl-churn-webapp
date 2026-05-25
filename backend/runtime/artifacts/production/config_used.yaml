@@ -1,0 +1,135 @@
+project:
+  name: churn_prediction
+  python_version: '>=3.11'
+paths:
+  raw_data_dir: data/raw
+  processed_data_dir: data/processed
+  modeling_data_dir: data/modeling
+  reports_dir: reports
+  artifacts_dir: artifacts
+  production_artifacts_dir: artifacts/production
+  experiment_artifacts_dir: artifacts/experiments
+  outputs_dir: outputs
+  monthly_panel: data/processed/influencer_month_panel.parquet
+  modeling_windows: data/modeling/development_windows_unlabeled.parquet
+  development_windows: data/modeling/development_windows_unlabeled.parquet
+  test_windows_2025: data/modeling/test_windows_unlabeled_2025.parquet
+  development_windows_labeled: data/modeling/development_windows_labeled.parquet
+  test_windows_labeled_2025: data/modeling/test_windows_labeled_2025.parquet
+  labeled_dataset: data/modeling/labeled_dataset.csv
+  production_model: artifacts/production/churn_model.joblib
+schema:
+  state_column: State
+  customer_name_column: Name
+  customer_mobile_column: MobileNo1
+  canonical_columns:
+    state: State
+    customer_name: Name
+    customer_mobile_number_raw: MobileNo1
+    mobile_id: mobile_id
+  column_aliases:
+    state:
+    - State
+    - state
+    - State Name
+    - StateName
+    customer_name:
+    - Name
+    - Customer name
+    - Customer Name
+    - Customer
+    - Influencer Name
+    customer_mobile_number:
+    - MobileNo1
+    - Mobile No
+    - Mobile No.
+    - Mobile
+    - Customer mobile number
+    - Customer Mobile Number
+    - Phone
+    - Contact
+  month_columns:
+  - Jan
+  - Feb
+  - Mar
+  - Apr
+  - May
+  - Jun
+  - Jul
+  - Aug
+  - Sep
+  - Oct
+  - Nov
+  - Dec
+windowing:
+  feature_months: 6
+  horizon_months: 3
+split:
+  development_years:
+  - 2022
+  - 2023
+  - 2024
+  holdout_year: 2025
+cleaning:
+  blank_tokens:
+  - ''
+  - ' '
+  - '-'
+  - --
+  - NA
+  - N/A
+  - 'NULL'
+  - 'null'
+  - None
+  mobile:
+    valid_lengths:
+    - 10
+    prefer_last_n_digits: 10
+    invalid_mobile_policy: keep_flagged
+  duplicates:
+    resolution_rule: aggregate_by_mobile_year
+    group_by:
+    - source_year
+    - mobile_id
+    scan_aggregation: sum
+    identity_resolution: most_frequent_nonblank_then_first
+    invalid_mobile_resolution: keep_each_source_row_flagged
+  monthly_dump:
+    year_aliases:
+    - year
+    - Year
+    - source_year
+    month_aliases:
+    - month
+    - Month
+    - period
+    - Period
+    - date
+    - Date
+    scan_value_aliases:
+    - scan_value
+    - Scan Value
+    - scans
+    - Scans
+    - points
+    - Points
+    - Rishta Points
+business_rules:
+  target_definition:
+    type: future_total_rule
+    source_column: future_minus_recent
+    operator: <=
+    threshold: -202.0
+  potential_definition:
+    type: null
+  risk_bands:
+    type: null
+  prioritization_strategy:
+    type: null
+  model_selection_strategy:
+    type: recently_scanning_pr_auc_priority
+    primary_metric: pr_auc_recently_scanning_validation
+    tie_breaker_metric: pr_auc_overall_validation
+modeling:
+  random_state: 42
+  include_state_feature: true

@@ -1,0 +1,32 @@
+{
+  "config_version": "1.0.0-draft",
+  "status": "PLACEHOLDER_REQUIRES_BUSINESS_APPROVAL",
+  "requires_final_signoff": true,
+  "notes": [
+    "Potential Level mapping is explicit by contract and must be approved before production signoff.",
+    "Risk x Potential Level mapping is explicit by contract and must not be silently overridden in code.",
+    "Any unspecified combination must be handled explicitly and must not be silently dropped."
+  ],
+  "potential_band_to_level": {
+    ">25k": "HIGH",
+    "15-25k": "MEDIUM",
+    "12-15k": "LOW",
+    "<12k": "LOW",
+    "BLANK": "OTHER"
+  },
+  "risk_potential_level_to_priority_bucket": {
+    "HIGH RISK|HIGH": "RED",
+    "HIGH RISK|MEDIUM": "RED",
+    "MEDIUM RISK|HIGH": "RED",
+    "MEDIUM RISK|MEDIUM": "ORANGE",
+    "MEDIUM RISK|LOW": "ORANGE",
+    "HIGH RISK|LOW": "ORANGE",
+    "LOW RISK|HIGH": "GREEN",
+    "LOW RISK|MEDIUM": "GREEN",
+    "LOW RISK|LOW": "OTHER"
+  },
+  "unmapped_combination_policy": {
+    "mode": "ERROR",
+    "message": "Unmapped Risk x Potential Level combination found. Update ui_bucket_config.json explicitly."
+  }
+}

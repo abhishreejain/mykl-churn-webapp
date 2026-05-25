@@ -1,0 +1,105 @@
+{
+  "created_at_utc": "2026-05-03T18:17:47.115165+00:00",
+  "selected_model_name": "xgboost",
+  "selected_model_family": "xgboost",
+  "training_config_source": "C:\\Users\\Jain abhishree\\The Boston Consulting Group, Inc\\MYKLD-10018907-Biz Transformation - Documents\\06 Team Working Folders\\01 Abhishree\\16 Influencer\\Degrown Influencers\\Churn Analysis v3\\artifacts\\experiments\\training_config.yaml",
+  "production_bundle": {
+    "model_joblib": "C:\\Users\\Jain abhishree\\The Boston Consulting Group, Inc\\MYKLD-10018907-Biz Transformation - Documents\\06 Team Working Folders\\01 Abhishree\\16 Influencer\\Degrown Influencers\\Churn Analysis v3\\artifacts\\production\\model.joblib",
+    "preprocessor_joblib": "C:\\Users\\Jain abhishree\\The Boston Consulting Group, Inc\\MYKLD-10018907-Biz Transformation - Documents\\06 Team Working Folders\\01 Abhishree\\16 Influencer\\Degrown Influencers\\Churn Analysis v3\\artifacts\\production\\preprocessor.joblib",
+    "config_used_yaml": "C:\\Users\\Jain abhishree\\The Boston Consulting Group, Inc\\MYKLD-10018907-Biz Transformation - Documents\\06 Team Working Folders\\01 Abhishree\\16 Influencer\\Degrown Influencers\\Churn Analysis v3\\artifacts\\production\\config_used.yaml",
+    "legacy_production_model_path": "C:\\Users\\Jain abhishree\\The Boston Consulting Group, Inc\\MYKLD-10018907-Biz Transformation - Documents\\06 Team Working Folders\\01 Abhishree\\16 Influencer\\Degrown Influencers\\Churn Analysis v3\\artifacts\\production\\churn_model.joblib"
+  },
+  "output_contract": [
+    "State",
+    "Customer name",
+    "Customer mobile number",
+    "Potential",
+    "Churn probability",
+    "Risk"
+  ],
+  "feature_columns_train_score_parity": [
+    "month_1",
+    "month_2",
+    "month_3",
+    "month_4",
+    "month_5",
+    "month_6",
+    "sum_6m",
+    "avg_6m",
+    "median_6m",
+    "min_6m",
+    "max_6m",
+    "std_6m",
+    "active_months_last_2",
+    "active_months_last_3",
+    "active_months_last_4",
+    "active_months_last_5",
+    "active_months_last_6",
+    "pct_change_last_3_vs_prev_3",
+    "first_3m_sum",
+    "last_3m_sum",
+    "last_2m_sum",
+    "last_1m",
+    "ratio_last3_first3",
+    "ratio_last2_last4",
+    "delta_last3_first3",
+    "delta_last2_last3",
+    "trend_last_3_vs_prev_3",
+    "month6_vs_month1_ratio",
+    "linear_trend_slope_6m",
+    "avg_month_on_month_change",
+    "positive_change_count",
+    "negative_change_count",
+    "zero_month_count",
+    "recent_consecutive_zero_count",
+    "active_month_count",
+    "coefficient_of_variation",
+    "share_recent3_of_total6",
+    "volatility_std_mom_change",
+    "volatility_range_6m",
+    "volatility_mean_abs_mom_change",
+    "volatility_max_abs_mom_change",
+    "state"
+  ],
+  "business_rules_snapshot": {
+    "target_definition": {
+      "type": "future_total_rule",
+      "source_column": "future_minus_recent",
+      "operator": "<=",
+      "threshold": -202.0
+    },
+    "potential_definition": {
+      "type": "potential_momentum_hybrid",
+      "high": {
+        "recent_3m_sum_gte": 294,
+        "active_month_count_gte": 4
+      },
+      "medium": {
+        "recent_3m_sum_gte": 72,
+        "active_month_count_gte": 2
+      },
+      "else": "low"
+    },
+    "risk_bands": {
+      "type": "risk_quantile_95_85_70",
+      "critical_score_gte": 0.955783,
+      "high_score_gte": 0.89353,
+      "medium_score_gte": 1e-05,
+      "else": "low"
+    },
+    "prioritization_strategy": {
+      "type": null
+    },
+    "model_selection_strategy": {
+      "type": "recently_scanning_pr_auc_priority",
+      "primary_metric": "pr_auc_recently_scanning_validation",
+      "tie_breaker_metric": "pr_auc_overall_validation"
+    }
+  },
+  "final_feature_weightages": {
+    "business_facing_metric": "normalized permutation importance",
+    "column_name": "final_weightage_pct",
+    "csv_path": "C:\\Users\\Jain abhishree\\The Boston Consulting Group, Inc\\MYKLD-10018907-Biz Transformation - Documents\\06 Team Working Folders\\01 Abhishree\\16 Influencer\\Degrown Influencers\\Churn Analysis v3\\reports\\final_feature_weightages.csv",
+    "markdown_path": "C:\\Users\\Jain abhishree\\The Boston Consulting Group, Inc\\MYKLD-10018907-Biz Transformation - Documents\\06 Team Working Folders\\01 Abhishree\\16 Influencer\\Degrown Influencers\\Churn Analysis v3\\reports\\final_feature_weightages.md"
+  }
+}

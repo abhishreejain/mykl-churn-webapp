@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MYKL CHURN PREDICTOR</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="top-header">
+      <div class="header-branding">
+        <img class="header-logo" src="MYKL_logo.jpg" alt="MYKL Laticrete logo" />
+        <h1>MYKL CHURN PREDICTOR</h1>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <aside class="left-panel">
+        <section class="brand-card">
+          <p class="brand-eyebrow">Workflow Control</p>
+          <h2>Churn + Potential Run</h2>
+          <p class="brand-subtext">Select workbook, run pipeline, monitor status, and download output.</p>
+        </section>
+
+        <section class="control-card">
+          <h3>Input Workbook</h3>
+          <input id="workbookInput" class="hidden-input" type="file" accept=".xlsx,.xls" />
+          <button id="chooseFileBtn" class="primary-soft-btn" type="button">Choose Excel File</button>
+          <div class="selected-file-box">
+            <p class="mini-label">Selected file</p>
+            <p id="selectedFileText" class="selected-file-text">None</p>
+          </div>
+          <button id="generateBtn" class="primary-btn" type="button">Generate Dashboard</button>
+        </section>
+
+        <section class="status-card">
+          <h3 id="statusTitle">Current status</h3>
+          <p id="statusMessage">Choose an Excel file and click Generate when you are ready.</p>
+          <p class="status-file-line"><strong>Selected file:</strong> <span id="statusFileName">None</span></p>
+          <p class="status-file-line"><strong>Job ID:</strong> <span id="statusJobId">None</span></p>
+        </section>
+
+        <section class="download-card">
+          <h3>Download area</h3>
+          <p id="downloadHint">Download button will appear after a successful run.</p>
+          <button id="downloadBtn" class="primary-btn hidden" type="button">Download final enriched output</button>
+        </section>
+      </aside>
+
+      <section class="workspace-panel">
+        <section id="preRunWorkspace" class="workspace-card">
+          <h2>Main Workspace</h2>
+          <p class="workspace-note">
+            Upload a workbook to begin processing. This dashboard is designed for the output of the original scoring and
+            potential enrichment workflow.
+          </p>
+          <div class="guidance-box">
+            <p><strong>Accepted file types:</strong> <code>.xlsx</code>, <code>.xls</code></p>
+            <p><strong>Input format requirement:</strong> file must match the format accepted by <code>score_input_file.py</code>.</p>
+          </div>
+        </section>
+
+        <section id="postRunWorkspace" class="workspace-card hidden">
+          <h2>Operational Dashboard</h2>
+          <p class="workspace-note">Live dashboard view from churn + potential backend output.</p>
+
+          <section class="filter-card state-filter-card">
+            <h4>State</h4>
+            <label class="sr-only" for="stateFilterSelect">Select state</label>
+            <select id="stateFilterSelect" class="state-select">
+              <option value="ALL">All States</option>
+            </select>
+          </section>
+
+          <div class="summary-grid">
+            <article class="summary-tile red-tile">
+              <h4>Red</h4>
+              <p class="summary-rule-text">Immediate action bracket</p>
+              <div class="summary-metric"><span id="redCount">0</span> influencers</div>
+              <div class="mini-meter"><div id="redMeter" class="meter-fill red-fill"></div></div>
+            </article>
+            <article class="summary-tile orange-tile">
+              <h4>Orange</h4>
+              <p class="summary-rule-text">Near-term action bracket</p>
+              <div class="summary-metric"><span id="orangeCount">0</span> influencers</div>
+              <div class="mini-meter"><div id="orangeMeter" class="meter-fill orange-fill"></div></div>
+            </article>
+            <article class="summary-tile green-tile">
+              <h4>Green</h4>
+              <p class="summary-rule-text">Monitor-and-hold bracket</p>
+              <div class="summary-metric"><span id="greenCount">0</span> influencers</div>
+              <div class="mini-meter"><div id="greenMeter" class="meter-fill green-fill"></div></div>
+            </article>
+          </div>
+
+          <section class="summary-strip">
+            <span><strong>Total:</strong> <span id="totalCount">0</span></span>
+            <span><strong>Other:</strong> <span id="otherCount">0</span></span>
+            <span><strong>Active filters:</strong> <span id="activeFilterText">All States | All Risks | All Potential Levels</span></span>
+          </section>
+
+          <div class="filters-row">
+            <section class="filter-card">
+              <h4>Risk</h4>
+              <div id="riskButtons" class="button-pill-row">
+                <button type="button" class="pill-btn active" data-filter-type="risk" data-filter-value="ALL">All Risks</button>
+              </div>
+            </section>
+            <section class="filter-card">
+              <h4>Potential Level</h4>
+              <div id="potentialButtons" class="button-pill-row">
+                <button type="button" class="pill-btn active" data-filter-type="potential" data-filter-value="ALL">
+                  All Potential Levels
+                </button>
+              </div>
+            </section>
+          </div>
+
+          <section class="influencer-list-card">
+            <h4>Influencer List</h4>
+            <p id="influencerListHint" class="workspace-note">No records loaded yet.</p>
+            <div class="table-wrap">
+              <table class="influencer-table">
+                <thead>
+                  <tr>
+                    <th>Customer Name</th>
+                    <th>Customer Mobile Number</th>
+                    <th>Risk</th>
+                    <th>Potential Level</th>
+                    <th>Priority</th>
+                    <th>Churn Prob.</th>
+                    <th>Potential</th>
+                  </tr>
+                </thead>
+                <tbody id="influencerRows"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+    <script src="app.js"></script>
+  </body>
+</html>
