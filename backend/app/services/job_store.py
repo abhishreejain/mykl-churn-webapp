@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import os
 from pathlib import Path
 import re
 import secrets
@@ -68,3 +69,32 @@ def read_metadata(job_id: str) -> dict[str, Any] | None:
         return None
     return raw
 
+
+def list_job_ids() -> list[str]:
+    root = ensure_job_root()
+    entries = [path.name for path in root.iterdir() if path.is_dir() and validate_job_id(path.name)]
+    return sorted(entries)
+
+
+def processing_lock_path(job_id: str) -> Path:
+    return job_dir(job_id) / ".processing.lock"
+
+
+def try_acquire_processing_lock(job_id: str) -> bool:
+    lock_path = processing_lock_path(job_id)
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        return False
+    with os.fdopen(fd, "w", encoding="utf-8") as handle:
+        handle.write(datetime.now(timezone.utc).isoformat())
+    return True
+
+
+def release_processing_lock(job_id: str) -> None:
+    lock_path = processing_lock_path(job_id)
+    try:
+        lock_path.unlink()
+    except FileNotFoundError:
+        return

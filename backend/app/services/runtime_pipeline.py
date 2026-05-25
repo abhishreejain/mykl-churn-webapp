@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import logging
 from typing import Any
 
 import pandas as pd
@@ -14,6 +15,7 @@ import pandas as pd
 from .dashboard_service import build_dashboard_dataset
 from .job_store import output_dir, read_metadata, write_metadata
 
+LOGGER = logging.getLogger("mykl.runtime_pipeline")
 
 SERVICE_ROOT = Path(__file__).resolve().parents[2]
 
@@ -325,8 +327,14 @@ def run_processing_chain(job_id: str, uploaded_input_path: Path) -> dict[str, An
         "--output",
         str(churn_csv),
     ]
+    LOGGER.info("stage_start job_id=%s stage=churn script=%s", job_id, SCORE_SCRIPT)
     scoring_result = _run_subprocess(scoring_command, stage="churn")
     _validate_csv_schema(churn_csv, SCORED_COLUMNS, stage="churn")
+    LOGGER.info("stage_complete job_id=%s stage=churn return_code=%s", job_id, scoring_result.get("return_code"))
+
+    meta = read_metadata(job_id) or {}
+    meta.update({"status": "processing_potential"})
+    write_metadata(job_id, meta)
 
     potential_command = [
         sys.executable,
@@ -338,8 +346,10 @@ def run_processing_chain(job_id: str, uploaded_input_path: Path) -> dict[str, An
         "--lookup-output",
         str(POTENTIAL_LOOKUP),
     ]
+    LOGGER.info("stage_start job_id=%s stage=potential script=%s", job_id, POTENTIAL_SCRIPT)
     potential_result = _run_subprocess(potential_command, stage="potential")
     _validate_csv_schema(final_csv, FINAL_COLUMNS, stage="potential")
+    LOGGER.info("stage_complete job_id=%s stage=potential return_code=%s", job_id, potential_result.get("return_code"))
 
     final_df = _read_csv_with_fallback(final_csv)
     final_df.to_excel(final_xlsx, index=False)
@@ -364,6 +374,7 @@ def run_processing_chain(job_id: str, uploaded_input_path: Path) -> dict[str, An
         }
     )
     write_metadata(job_id, meta)
+    LOGGER.info("outputs_ready job_id=%s churn=%s final=%s final_xlsx=%s", job_id, churn_csv.name, final_csv.name, final_xlsx.name)
 
     return {
         "ok": True,
@@ -403,6 +414,8 @@ def _run_subprocess(command: list[str], stage: str) -> dict[str, Any]:
     return {
         "return_code": int(proc.returncode),
         "status": "ok",
+        "stdout_tail": (proc.stdout or "")[-4000:],
+        "stderr_tail": (proc.stderr or "")[-4000:],
     }
 
 
