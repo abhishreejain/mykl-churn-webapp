@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -14,17 +15,197 @@ from .dashboard_service import build_dashboard_dataset
 from .job_store import output_dir, read_metadata, write_metadata
 
 
-REPO_ROOT = Path(__file__).resolve().parents[4]
-ORIGINAL_SCRIPTS_DIR = REPO_ROOT / "scripts"
-ORIGINAL_SRC_DIR = REPO_ROOT / "src"
-ORIGINAL_ARTIFACTS_DIR = REPO_ROOT / "artifacts" / "production"
-FRONTEND_BUCKET_CONFIG = REPO_ROOT / "mykl_churn_webapp" / "frontend" / "ui_bucket_config.json"
+SERVICE_ROOT = Path(__file__).resolve().parents[2]
 
-SCORE_SCRIPT = ORIGINAL_SCRIPTS_DIR / "score_input_file.py"
-POTENTIAL_SCRIPT = ORIGINAL_SCRIPTS_DIR / "add_potential_to_scored_file.py"
-RUNTIME_CONFIG = ORIGINAL_ARTIFACTS_DIR / "config_used.yaml"
-RUNTIME_METADATA = ORIGINAL_ARTIFACTS_DIR / "metadata.json"
-POTENTIAL_LOOKUP = ORIGINAL_ARTIFACTS_DIR / "potential_lookup_2024_2025.parquet"
+
+def _existing_path(paths: list[Path]) -> Path | None:
+    for path in paths:
+        if path.exists():
+            return path
+    return None
+
+
+def _resolve_runtime_layout(
+    *,
+    service_root: Path | None = None,
+    env_repo_root: str | None = None,
+    search_roots: list[Path] | None = None,
+) -> dict[str, Path]:
+    """Resolve script/src/artifact paths for local and Render layouts.
+
+    Resolution order:
+    1) `MYKL_REPO_ROOT` (or provided env_repo_root) for full original repo layout.
+    2) Upward scan from this module for a full original repo layout.
+    3) Upward scan for packaged runtime layout containing `runtime/scripts`.
+    4) Default to `<service_root>/runtime` packaged layout.
+    """
+    resolved_service_root = (service_root or SERVICE_ROOT).resolve()
+    configured_repo_root = env_repo_root if env_repo_root is not None else os.getenv("MYKL_REPO_ROOT")
+
+    explicit_roots = [Path(configured_repo_root).expanduser().resolve()] if configured_repo_root else []
+    inferred_roots = [path.resolve() for path in (search_roots or list(Path(__file__).resolve().parents))]
+    candidate_roots: list[Path] = []
+    seen: set[str] = set()
+    for root in explicit_roots + inferred_roots:
+        key = str(root)
+        if key in seen:
+            continue
+        seen.add(key)
+        candidate_roots.append(root)
+
+    def build_original_layout(candidate_root: Path) -> dict[str, Path] | None:
+        scripts_dir = candidate_root / "scripts"
+        src_dir = candidate_root / "src"
+        artifacts_dir = candidate_root / "artifacts" / "production"
+        score_script = scripts_dir / "score_input_file.py"
+        potential_script = scripts_dir / "add_potential_to_scored_file.py"
+        runtime_config = artifacts_dir / "config_used.yaml"
+        runtime_metadata = artifacts_dir / "metadata.json"
+        potential_lookup = artifacts_dir / "potential_lookup_2024_2025.parquet"
+        frontend_bucket = _existing_path(
+            [
+                candidate_root / "mykl_churn_webapp" / "frontend" / "ui_bucket_config.json",
+                candidate_root / "frontend" / "ui_bucket_config.json",
+            ]
+        )
+        if (
+            score_script.exists()
+            and potential_script.exists()
+            and src_dir.exists()
+            and runtime_config.exists()
+            and runtime_metadata.exists()
+            and potential_lookup.exists()
+            and frontend_bucket is not None
+        ):
+            return {
+                "mode": Path("original"),
+                "repo_root": candidate_root,
+                "scripts_dir": scripts_dir,
+                "src_dir": src_dir,
+                "artifacts_dir": artifacts_dir,
+                "score_script": score_script,
+                "potential_script": potential_script,
+                "runtime_config": runtime_config,
+                "runtime_metadata": runtime_metadata,
+                "potential_lookup": potential_lookup,
+                "frontend_bucket_config": frontend_bucket,
+            }
+        return None
+
+    for candidate_root in candidate_roots:
+        original_layout = build_original_layout(candidate_root)
+        if original_layout:
+            return original_layout
+
+    for candidate_root in candidate_roots:
+        runtime_root = candidate_root / "runtime"
+        runtime_scripts = runtime_root / "scripts"
+        runtime_src = runtime_root / "src"
+        runtime_artifacts = runtime_root / "artifacts" / "production"
+        score_script = runtime_scripts / "score_input_file.py"
+        potential_script = runtime_scripts / "add_potential_to_scored_file.py"
+        runtime_config = runtime_artifacts / "config_used.yaml"
+        runtime_metadata = runtime_artifacts / "metadata.json"
+        potential_lookup = runtime_artifacts / "potential_lookup_2024_2025.parquet"
+        frontend_bucket = _existing_path(
+            [
+                candidate_root / "frontend" / "ui_bucket_config.json",
+                candidate_root.parent / "frontend" / "ui_bucket_config.json",
+                runtime_root / "ui_bucket_config.json",
+            ]
+        )
+        if (
+            score_script.exists()
+            and potential_script.exists()
+            and runtime_src.exists()
+            and runtime_config.exists()
+            and runtime_metadata.exists()
+            and potential_lookup.exists()
+            and frontend_bucket is not None
+        ):
+            return {
+                "mode": Path("packaged_runtime"),
+                "repo_root": candidate_root,
+                "scripts_dir": runtime_scripts,
+                "src_dir": runtime_src,
+                "artifacts_dir": runtime_artifacts,
+                "score_script": score_script,
+                "potential_script": potential_script,
+                "runtime_config": runtime_config,
+                "runtime_metadata": runtime_metadata,
+                "potential_lookup": potential_lookup,
+                "frontend_bucket_config": frontend_bucket,
+            }
+
+    runtime_root = resolved_service_root / "runtime"
+    runtime_scripts = runtime_root / "scripts"
+    runtime_src = runtime_root / "src"
+    runtime_artifacts = runtime_root / "artifacts" / "production"
+    score_script = runtime_scripts / "score_input_file.py"
+    potential_script = runtime_scripts / "add_potential_to_scored_file.py"
+    runtime_config = runtime_artifacts / "config_used.yaml"
+    runtime_metadata = runtime_artifacts / "metadata.json"
+    potential_lookup = runtime_artifacts / "potential_lookup_2024_2025.parquet"
+    frontend_bucket = _existing_path(
+        [
+            resolved_service_root.parent / "frontend" / "ui_bucket_config.json",
+            resolved_service_root / "frontend" / "ui_bucket_config.json",
+            runtime_root / "ui_bucket_config.json",
+        ]
+    )
+
+    required = [
+        score_script,
+        potential_script,
+        runtime_src,
+        runtime_config,
+        runtime_metadata,
+        potential_lookup,
+    ]
+    missing = [str(path) for path in required if not path.exists()]
+    if frontend_bucket is None:
+        missing.append(
+            f"ui_bucket_config.json (checked: "
+            f"{resolved_service_root.parent / 'frontend' / 'ui_bucket_config.json'}, "
+            f"{resolved_service_root / 'frontend' / 'ui_bucket_config.json'}, "
+            f"{runtime_root / 'ui_bucket_config.json'})"
+        )
+
+    if missing:
+        raise RuntimeError(
+            "Unable to resolve runtime layout for processing. Missing required files: "
+            + "; ".join(missing)
+            + ". Ensure the deploy contains either full original repo roots (scripts/src/artifacts) "
+            + "or packaged backend/runtime with frontend/ui_bucket_config.json."
+        )
+
+    return {
+        "mode": Path("packaged_runtime_fallback"),
+        "repo_root": resolved_service_root,
+        "scripts_dir": runtime_scripts,
+        "src_dir": runtime_src,
+        "artifacts_dir": runtime_artifacts,
+        "score_script": score_script,
+        "potential_script": potential_script,
+        "runtime_config": runtime_config,
+        "runtime_metadata": runtime_metadata,
+        "potential_lookup": potential_lookup,
+        "frontend_bucket_config": frontend_bucket,
+    }
+
+
+RUNTIME_LAYOUT = _resolve_runtime_layout()
+REPO_ROOT = Path(RUNTIME_LAYOUT["repo_root"])
+ORIGINAL_SCRIPTS_DIR = Path(RUNTIME_LAYOUT["scripts_dir"])
+ORIGINAL_SRC_DIR = Path(RUNTIME_LAYOUT["src_dir"])
+ORIGINAL_ARTIFACTS_DIR = Path(RUNTIME_LAYOUT["artifacts_dir"])
+FRONTEND_BUCKET_CONFIG = Path(RUNTIME_LAYOUT["frontend_bucket_config"])
+
+SCORE_SCRIPT = Path(RUNTIME_LAYOUT["score_script"])
+POTENTIAL_SCRIPT = Path(RUNTIME_LAYOUT["potential_script"])
+RUNTIME_CONFIG = Path(RUNTIME_LAYOUT["runtime_config"])
+RUNTIME_METADATA = Path(RUNTIME_LAYOUT["runtime_metadata"])
+POTENTIAL_LOOKUP = Path(RUNTIME_LAYOUT["potential_lookup"])
 
 FINAL_CSV_NAME = "final_enriched_output.csv"
 FINAL_XLSX_NAME = "final_enriched_output.xlsx"
