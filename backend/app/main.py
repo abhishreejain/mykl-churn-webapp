@@ -39,6 +39,11 @@ async def healthz() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/health")
+async def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
 @app.get("/")
 async def index():
     index_path = FRONTEND_ROOT / "index.html"
