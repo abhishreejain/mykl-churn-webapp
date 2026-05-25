@@ -423,6 +423,9 @@ function resolveApiBase() {
   if (window.MYKL_API_BASE && String(window.MYKL_API_BASE).trim()) {
     return String(window.MYKL_API_BASE).trim().replace(/\/+$/, "");
   }
+  if (window.MYKL_APP_CONFIG && String(window.MYKL_APP_CONFIG.apiBaseUrl || "").trim()) {
+    return String(window.MYKL_APP_CONFIG.apiBaseUrl).trim().replace(/\/+$/, "");
+  }
   if (window.location.protocol === "file:") {
     return "https://mykl-churn-webapp.onrender.com";
   }
@@ -436,6 +439,11 @@ function resolveApiBase() {
 }
 
 async function assertBackendReachable() {
+  if (!apiBase || !String(apiBase).trim()) {
+    throw new Error(
+      "Backend API base URL is not configured. Set frontend config.js (MYKL_APP_CONFIG.apiBaseUrl) or provide ?apiBase=..."
+    );
+  }
   const healthUrl = `${apiBase}/api/health`;
   try {
     const response = await fetch(healthUrl, { method: "GET" });
