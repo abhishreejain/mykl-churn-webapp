@@ -424,13 +424,13 @@ function resolveApiBase() {
     return String(window.MYKL_API_BASE).trim().replace(/\/+$/, "");
   }
   if (window.location.protocol === "file:") {
-    return "http://127.0.0.1:8000";
+    return "https://mykl-churn-webapp.onrender.com";
   }
   if (
     (window.location.hostname === "127.0.0.1" || window.location.hostname === "localhost") &&
     window.location.port !== "8000"
   ) {
-    return "http://127.0.0.1:8000";
+    return "https://mykl-churn-webapp.onrender.com";
   }
   return "";
 }
